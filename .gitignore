@@ -1,0 +1,61 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+coverage/
+
+# Dart
+*.lock
+pubspec.lock
+
+# Generated files
+*.g.dart
+*.config.dart
+*.freezed.dart
+*.chopper.dart
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Logs
+*.log
+
+# Misc
+.metadata
+devtools_options.yaml
+
+# Build artifacts
+*.apk
+*.aab
+*.app
+*.ipa
+*.ipa
+*.deb
+*.exe
+*.msi
+*.dmg
+*.snap
