@@ -11,7 +11,6 @@ class MotorResultados {
     required this.incognitasResueltas,
   });
 
-  // Factory para parsear el JSON anidado que manda FastAPI
   factory MotorResultados.fromJson(Map<String, dynamic> json) {
     return MotorResultados(
       sumatoriaFx: (json['sumatoria_fuerzas_x']['valor'] as num).toDouble(),
@@ -20,4 +19,12 @@ class MotorResultados {
       incognitasResueltas: json['incognitas_resueltas'] ?? {},
     );
   }
+
+  // ← FIX: método toJson agregado
+  Map<String, dynamic> toJson() => {
+        "sumatoria_fuerzas_x": sumatoriaFx,
+        "sumatoria_fuerzas_y": sumatoriaFy,
+        "en_equilibrio": enEquilibrio,
+        "incognitas_resueltas": incognitasResueltas,
+      };
 }
