@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_latex/flutter_markdown_latex.dart';
+import 'package:markdown/markdown.dart' as md;
 import '../logic/chat_provider.dart';
 
 // Método global para abrir el asistente desde cualquier pantalla de mecánica
@@ -86,9 +89,33 @@ class _MiniChatAssistantMecanicaState extends State<MiniChatAssistantMecanica> {
                         bottomLeft: !msg.isUser ? const Radius.circular(0) : null
                       )
                     ), 
-                    child: Text(
-                      msg.text, 
-                      style: TextStyle(fontSize: 14, color: msg.isUser ? Colors.white : (isDark ? Colors.white : const Color(0xFF1A2D4A)))
+                    child: MarkdownBody(
+                      data: msg.text,
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(
+                          fontSize: 16,
+                          color: msg.isUser ? Colors.white : (isDark ? Colors.white : const Color(0xFF1A2D4A)),
+                        ),
+                      ),
+                      builders: {
+                        'latex': LatexElementBuilder(
+                          textStyle: TextStyle(
+                            color: msg.isUser ? Colors.white70 : Colors.blue,
+                            fontSize: 16,
+                          ),
+                        ),
+                      },
+                      extensionSet: md.ExtensionSet(
+                        [
+                          ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
+                          LatexBlockSyntax(),
+                        ],
+                        [
+                          ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
+                          LatexInlineSyntax(),
+                        ],
+                      ),
                     )
                   )
                 );
