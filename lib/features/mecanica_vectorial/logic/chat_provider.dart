@@ -3,6 +3,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:developer' as developer;
 
+
 class ChatProvider with ChangeNotifier {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;

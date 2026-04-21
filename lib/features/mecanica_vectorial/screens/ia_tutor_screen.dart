@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../app.dart';
 import '../logic/mecanica_provider.dart';
 import '../models/estado_canvas.dart';
-import 'mecanica_chat_sheet.dart';
 
 class IaTutorScreen extends StatelessWidget {
   const IaTutorScreen({super.key});
@@ -11,174 +10,164 @@ class IaTutorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<MecanicaProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Helper para leer el estado del Enum
-    String getTextoEstado() {
+    // 1. Lógica para el banner de estado superior
+    String getEstadoTexto() {
       switch (provider.estadoCanvas) {
-        case EstadoCanvas.vacio: return "Canvas vacío. Dibuja para comenzar.";
-        case EstadoCanvas.calculando: return "Analizando física en el servidor...";
-        case EstadoCanvas.verificado: return "Diagrama verificado. ${provider.vectores.length} fuerzas detectadas.";
-        case EstadoCanvas.error: return "Error de conexión con el motor matemático.";
+        case EstadoCanvas.vacio:
+          return "Lienzo vacío. Dibuja para comenzar.";
+        case EstadoCanvas.calculando:
+          return "Analizando física en el servidor...";
+        case EstadoCanvas.verificado:
+          return "Diagrama verificado. ${provider.vectores.length} fuerzas detectadas.";
+        case EstadoCanvas.error:
+          return "Error de conexión con el motor matemático.";
+      }
+    }
+
+    Color getEstadoColor() {
+      switch (provider.estadoCanvas) {
+        case EstadoCanvas.vacio: return Colors.grey;
+        case EstadoCanvas.calculando: return AppColors.skyBlue;
+        case EstadoCanvas.verificado: return Colors.green;
+        case EstadoCanvas.error: return Colors.red;
       }
     }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          // ── 1. ENCABEZADO ──
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-            child: Row(
-              children: [
-                const Icon(Icons.psychology_rounded, color: AppColors.skyBlue, size: 32),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Math IA Tutor',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Tu asistente inteligente para resolver problemas.',
-                        style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── 2. ESTADO DEL DIAGRAMA ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _buildInfoCard(
-              context: context,
-              icon: Icons.architecture_rounded,
-              title: 'Estado del Diagrama',
-              value: getTextoEstado(),
-              isDark: isDark,
-              isHighlight: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── 3. BOTÓN PARA ABRIR TUTORÍA ──
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                 String contextoMimificado = provider.obtenerContextoParaIA(); 
-                 showAssistantMecanica(context, AppColors.skyBlue, contextoMimificado);
-              },
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text(
-                'Abrir Chat del Tutor IA',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      appBar: AppBar(
+        title: const Text('Tutor Inteligente', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Theme.of(context).cardColor,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // --- BANNER DE ESTADO DEL MOTOR ---
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: getEstadoColor().withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: getEstadoColor().withValues(alpha: 0.3)),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.skyBlue.withValues(alpha: 0.1),
-                foregroundColor: AppColors.skyBlueDark,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.skyBlueLight, width: 1.5),
-                ),
-                elevation: 0,
+              child: Row(
+                children: [
+                  Icon(Icons.sensors, color: getEstadoColor(), size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      getEstadoTexto(),
+                      style: TextStyle(color: getEstadoColor(), fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 24),
 
-          // ── 4. GUÍA PASO A PASO (De la API Matemática) ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'RESULTADOS DEL MOTOR',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold, 
-                    fontSize: 12, 
-                    color: isDark ? Colors.white54 : AppColors.textSecondary,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                _buildInfoCard(
-                  context: context,
-                  icon: Icons.functions_rounded,
-                  title: 'Ecuaciones de equilibrio',
-                  value: provider.resultados != null 
-                       ? "ΣFx = ${provider.resultados!.sumatoriaFx}\nΣFy = ${provider.resultados!.sumatoriaFy}"
-                       : "Esperando cálculo...",
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoCard(
-                  context: context,
-                  icon: Icons.search_rounded,
-                  title: 'Reacciones (Estática Inversa)',
-                  value: provider.resultados != null 
-                      ? (provider.resultados!.incognitasResueltas.isEmpty 
-                          ? "Ninguna reacción detectada" 
-                          : provider.resultados!.incognitasResueltas.entries.map((e) => '${e.key} = ${e.value} N').join('\n'))
-                      : "Esperando cálculo...",
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoCard(
-                  context: context,
-                  icon: Icons.check_circle_outline_rounded,
-                  title: 'Verificación',
-                  value: provider.resultados != null 
-                      ? (provider.resultados!.enEquilibrio ? "El sistema está en equilibrio" : "El sistema NO está en equilibrio")
-                      : "Esperando cálculo...",
-                  isDark: isDark,
-                ),
-              ],
+            const SizedBox(height: 24),
+
+            // --- SECCIÓN DE RESULTADOS ANALÍTICOS ---
+            const Text('Análisis Estático', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            
+            _ResultCard(
+              title: "Sumatorias de Fuerza",
+              icon: Icons.functions,
+              value: provider.resultados != null 
+                  ? "ΣFx = ${provider.resultados!.sumatoriaFx.toStringAsFixed(2)} N\nΣFy = ${provider.resultados!.sumatoriaFy.toStringAsFixed(2)} N"
+                  : "Pendiente de cálculo...",
             ),
-          ),
-        ],
+            
+            _ResultCard(
+              title: "Reacciones e Incógnitas",
+              icon: Icons.key,
+              value: provider.resultados != null 
+                  ? (provider.resultados!.incognitasResueltas.isEmpty 
+                      ? "No se detectaron incógnitas de soporte."
+                      : provider.resultados!.incognitasResueltas.entries.map((e) => '${e.key} = ${e.value.toStringAsFixed(2)} N').join('\n'))
+                  : "Esperando datos del motor...",
+            ),
+
+            _ResultCard(
+              title: "Estado de Equilibrio",
+              icon: Icons.balance,
+              value: provider.resultados != null 
+                  ? (provider.resultados!.enEquilibrio ? "El sistema está en equilibrio estable." : "El sistema NO está en equilibrio.")
+                  : "Sin verificar.",
+              isHighlight: provider.resultados?.enEquilibrio ?? false,
+            ),
+
+            const SizedBox(height: 30),
+
+            // --- BOTÓN PARA EL GP (EXPERIMENTAL) ---
+            if (provider.pasosPedagogicos.isNotEmpty) ...[
+              const Text('Resolución Sugerida (IA)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  children: provider.pasosPedagogicos.map((paso) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                        Expanded(child: Text(paso, style: const TextStyle(fontSize: 13, height: 1.4))),
+                      ],
+                    ),
+                  )).toList(),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildInfoCard({
-    required BuildContext context, required IconData icon, required String title, required String value, required bool isDark, bool isHighlight = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isHighlight ? AppColors.skyBlue : (isDark ? AppColors.darkBorder : AppColors.divider),
-          width: isHighlight ? 1.5 : 1.0,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: isHighlight ? AppColors.skyBlue : AppColors.textSecondary, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 2),
-                Text(value, style: TextStyle(fontSize: 12, color: isHighlight ? (isDark ? Colors.white : Colors.black87) : AppColors.textSecondary)),
-              ],
+class _ResultCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final bool isHighlight;
+
+  const _ResultCard({
+    required this.title, 
+    required this.value, 
+    required this.icon, 
+    this.isHighlight = false
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: Icon(icon, color: isHighlight ? Colors.green : AppColors.skyBlue),
+        title: Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 15, 
+              fontWeight: FontWeight.bold, 
+              color: isHighlight ? Colors.green : Colors.white,
+              fontFamily: 'monospace'
             ),
           ),
-        ],
+        ),
       ),
     );
   }
