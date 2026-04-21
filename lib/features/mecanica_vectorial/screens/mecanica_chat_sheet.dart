@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_markdown_latex/flutter_markdown_latex.dart';
@@ -29,11 +30,44 @@ class MiniChatAssistantMecanica extends StatefulWidget {
 
 class _MiniChatAssistantMecanicaState extends State<MiniChatAssistantMecanica> {
   final _controller = TextEditingController();
+  late ScrollController _scrollController;
+  int? _copiedMessageIndex;
+  
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  }
   
   @override
   void dispose() { 
-    _controller.dispose(); 
+    _controller.dispose();
+    _scrollController.dispose();
     super.dispose(); 
+  }
+  
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+  
+  void _showCopiedNotification(int messageIndex) {
+    setState(() {
+      _copiedMessageIndex = messageIndex;
+    });
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _copiedMessageIndex = null;
+        });
+      }
+    });
   }
   
   @override
@@ -72,51 +106,145 @@ class _MiniChatAssistantMecanicaState extends State<MiniChatAssistantMecanica> {
           ),
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16), 
               itemCount: chatProvider.messages.length, 
               itemBuilder: (context, index) {
                 final msg = chatProvider.messages[index];
+                final isLastMessage = index == chatProvider.messages.length - 1;
+                final isLastTutorMessage = isLastMessage && !msg.isUser;
+                
                 return Align(
                   alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft, 
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8), 
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), 
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8), 
-                    decoration: BoxDecoration(
-                      color: msg.isUser ? widget.colorTema : (isDark ? const Color(0xFF234060) : const Color(0xFFE8EAF6)), 
-                      borderRadius: BorderRadius.circular(16).copyWith(
-                        bottomRight: msg.isUser ? const Radius.circular(0) : null, 
-                        bottomLeft: !msg.isUser ? const Radius.circular(0) : null
-                      )
-                    ), 
-                    child: MarkdownBody(
-                      data: msg.text,
-                      selectable: true,
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(
-                          fontSize: 16,
-                          color: msg.isUser ? Colors.white : (isDark ? Colors.white : const Color(0xFF1A2D4A)),
-                        ),
-                      ),
-                      builders: {
-                        'latex': LatexElementBuilder(
-                          textStyle: TextStyle(
-                            color: msg.isUser ? Colors.white70 : Colors.blue,
-                            fontSize: 16,
+                  child: Column(
+                    crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8), 
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), 
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8), 
+                        decoration: BoxDecoration(
+                          color: msg.isUser ? widget.colorTema : (isDark ? const Color(0xFF234060) : const Color(0xFFE8EAF6)), 
+                          borderRadius: BorderRadius.circular(16).copyWith(
+                            bottomRight: msg.isUser ? const Radius.circular(0) : null, 
+                            bottomLeft: !msg.isUser ? const Radius.circular(0) : null
+                          )
+                        ), 
+                        child: MarkdownBody(
+                          data: msg.text,
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(
+                              fontSize: 16,
+                              color: msg.isUser ? Colors.white : (isDark ? Colors.white : const Color(0xFF1A2D4A)),
+                            ),
                           ),
-                        ),
-                      },
-                      extensionSet: md.ExtensionSet(
-                        [
-                          ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
-                          LatexBlockSyntax(),
-                        ],
-                        [
-                          ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
-                          LatexInlineSyntax(),
-                        ],
+                          builders: {
+                            'latex': LatexElementBuilder(
+                              textStyle: TextStyle(
+                                color: msg.isUser ? Colors.white70 : Colors.blue,
+                                fontSize: 16,
+                              ),
+                            ),
+                          },
+                          extensionSet: md.ExtensionSet(
+                            [
+                              ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
+                              LatexBlockSyntax(),
+                            ],
+                            [
+                              ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
+                              LatexInlineSyntax(),
+                            ],
+                          ),
+                        )
                       ),
-                    )
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  height: 32,
+                                  width: 32,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Clipboard.setData(ClipboardData(text: msg.text));
+                                        _showCopiedNotification(index);
+                                      },
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Icon(
+                                        Icons.copy_rounded,
+                                        size: 18,
+                                        color: isDark ? Colors.white54 : Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (_copiedMessageIndex == index)
+                                  Positioned(
+                                    bottom: 36,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black87,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.check, size: 12, color: Colors.white),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            '¡Copiado!',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (isLastTutorMessage) ...[
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 32,
+                                width: 32,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      if (chatProvider.messages.length >= 2) {
+                                        final lastUserMessage = chatProvider.messages[chatProvider.messages.length - 2];
+                                        if (lastUserMessage.isUser) {
+                                          chatProvider.sendMessage(lastUserMessage.text, currentEquation: widget.contextoDatos);
+                                        }
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Icon(
+                                      Icons.refresh_rounded,
+                                      size: 18,
+                                      color: isDark ? Colors.white54 : Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   )
                 );
               }
