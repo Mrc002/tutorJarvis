@@ -20,7 +20,7 @@ class MotorResultados {
     );
   }
 
-  // ← FIX: método toJson agregado
+  // FIX: método toJson() faltante — el provider lo necesita para serializar
   Map<String, dynamic> toJson() => {
         "sumatoria_fuerzas_x": sumatoriaFx,
         "sumatoria_fuerzas_y": sumatoriaFy,

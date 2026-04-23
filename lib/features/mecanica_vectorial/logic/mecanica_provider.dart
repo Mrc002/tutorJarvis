@@ -5,10 +5,9 @@ import '../models/vector_fuerza.dart';
 import '../models/elemento_estructural.dart';
 import '../models/soporte.dart';
 import '../models/motor_resultados.dart';
+// FIX: importar el enum unificado — eliminar la definición local duplicada
+import '../models/estado_canvas.dart';
 import '../services/motor_api_service.dart';
-
-// Definimos los posibles estados de tu lienzo
-enum EstadoCanvas { vacio, dibujando, calculando, error }
 
 class MecanicaProvider extends ChangeNotifier {
   // ==========================================
@@ -16,12 +15,13 @@ class MecanicaProvider extends ChangeNotifier {
   // ==========================================
   List<Nodo> nodos = [];
   List<VectorFuerza> vectores = [];
-  List<ElementoEstructural> elementos = []; // Vigas
-  List<Soporte> soportes = []; // Apoyos
+  List<ElementoEstructural> elementos = [];
+  List<Soporte> soportes = [];
 
   // ==========================================
   // 2. ESTADO DEL MOTOR MATEMÁTICO
   // ==========================================
+  // FIX: renombrado a ultimosResultados para consistencia con ia_tutor_screen
   MotorResultados? ultimosResultados;
   EstadoCanvas estadoCanvas = EstadoCanvas.vacio;
 
@@ -31,8 +31,12 @@ class MecanicaProvider extends ChangeNotifier {
   List<String> pasosPedagogicos = [];
   bool calculandoPasos = false;
 
-  // --- GETTER ÚTIL ---
-  bool get isCanvasEmpty => nodos.isEmpty && vectores.isEmpty && elementos.isEmpty && soportes.isEmpty;
+  // --- GETTERS ---
+  bool get isCanvasEmpty =>
+      nodos.isEmpty && vectores.isEmpty && elementos.isEmpty && soportes.isEmpty;
+
+  // FIX: alias público para que IaTutorScreen pueda leer los resultados
+  MotorResultados? get resultados => ultimosResultados;
 
   // ==========================================
   // 4. MÉTODOS PARA CONSTRUIR LA ESTRUCTURA
@@ -62,7 +66,6 @@ class MecanicaProvider extends ChangeNotifier {
     vectores.clear();
     elementos.clear();
     soportes.clear();
-    
     pasosPedagogicos.clear();
     ultimosResultados = null;
     estadoCanvas = EstadoCanvas.vacio;
@@ -70,7 +73,7 @@ class MecanicaProvider extends ChangeNotifier {
   }
 
   // ==========================================
-  // 5. CONEXIÓN CON TU API EN PYTHON
+  // 5. CONEXIÓN CON LA API PYTHON
   // ==========================================
   void _actualizarEstadoYRecalcular() {
     if (isCanvasEmpty) {
@@ -78,11 +81,8 @@ class MecanicaProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    
     estadoCanvas = EstadoCanvas.dibujando;
     notifyListeners();
-    
-    // Llama a la API rápida (calculadora) en segundo plano
     _recalcularSistema();
   }
 
@@ -90,21 +90,20 @@ class MecanicaProvider extends ChangeNotifier {
     estadoCanvas = EstadoCanvas.calculando;
     notifyListeners();
 
-    // Pide los resultados instantáneos a /calcular
     final resultados = await MotorApiService.calcularSistema(nodos, vectores);
-    
+
     if (resultados != null) {
       ultimosResultados = resultados;
-      estadoCanvas = EstadoCanvas.dibujando;
+      // FIX: usar EstadoCanvas.verificado para que IaTutorScreen lo detecte
+      estadoCanvas = EstadoCanvas.verificado;
     } else {
       estadoCanvas = EstadoCanvas.error;
     }
-    
     notifyListeners();
   }
 
   // ==========================================
-  // 6. CONEXIÓN CON EL TUTOR GENÉTICO (GP)
+  // 6. TUTOR GENÉTICO (GP)
   // ==========================================
   Future<void> solicitarPasosTutor() async {
     if (nodos.isEmpty || vectores.isEmpty) return;
@@ -112,13 +111,14 @@ class MecanicaProvider extends ChangeNotifier {
     calculandoPasos = true;
     notifyListeners();
 
-    // Pide la evolución paso a paso a /calculargp
     final pasos = await MotorApiService.obtenerPasosEvolutivos(nodos, vectores);
-    
+
     if (pasos != null) {
       pasosPedagogicos = pasos;
     } else {
-      pasosPedagogicos = ["Error de conexión con el Tutor Evolutivo. Verifica que tu servidor en Render esté encendido y sin errores."];
+      pasosPedagogicos = [
+        "Error de conexión con el Tutor Evolutivo. Verifica que tu servidor en Render esté encendido."
+      ];
     }
 
     calculandoPasos = false;
@@ -126,21 +126,23 @@ class MecanicaProvider extends ChangeNotifier {
   }
 
   // ==========================================
-  // 7. EMPAQUETADOR DE CONTEXTO PARA IA Y DEBUG
+  // 7. EMPAQUETADOR DE CONTEXTO PARA IA
   // ==========================================
   String obtenerContextoParaIA() {
     if (isCanvasEmpty) return 'El lienzo está vacío.';
-    
-    // Arma un JSON perfecto para la pantalla de Debug y para el Tutor IA
+
     final payload = {
       "nodos": nodos.map((n) => n.toJson()).toList(),
       "vectores": vectores.map((v) => v.toJson()).toList(),
       "vigas": elementos.map((e) => e.toJson()).toList(),
       "soportes": soportes.map((s) => s.toJson()).toList(),
-      "resultados_actuales": ultimosResultados?.toJson() ?? "Aún sin resultados",
-      "tutor_genetico": pasosPedagogicos.isEmpty ? "Sin solicitar" : pasosPedagogicos
+      // FIX: ahora toJson() existe en MotorResultados, esto ya no crashea
+      "resultados_actuales":
+          ultimosResultados?.toJson() ?? "Aún sin resultados",
+      "tutor_genetico":
+          pasosPedagogicos.isEmpty ? "Sin solicitar" : pasosPedagogicos,
     };
-    
+
     return jsonEncode(payload);
   }
 }

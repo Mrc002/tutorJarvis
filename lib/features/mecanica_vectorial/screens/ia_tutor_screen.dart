@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app.dart';
 import '../logic/mecanica_provider.dart';
-// ← ELIMINAR esta línea que causaba el conflicto:
-// import '../models/estado_canvas.dart';
+// Importar SOLO desde models — fuente única del enum
+import '../models/estado_canvas.dart';
 
 class IaTutorScreen extends StatelessWidget {
   const IaTutorScreen({super.key});
@@ -17,9 +17,11 @@ class IaTutorScreen extends StatelessWidget {
         case EstadoCanvas.vacio:
           return "Lienzo vacío. Dibuja para comenzar.";
         case EstadoCanvas.dibujando:
-          return "Diagrama activo. ${provider.vectores.length} fuerzas detectadas.";
+          return "Dibujando... recalculando el sistema.";
         case EstadoCanvas.calculando:
           return "Analizando física en el servidor...";
+        case EstadoCanvas.verificado:
+          return "Diagrama verificado. ${provider.vectores.length} fuerzas detectadas.";
         case EstadoCanvas.error:
           return "Error de conexión con el motor matemático.";
       }
@@ -30,9 +32,11 @@ class IaTutorScreen extends StatelessWidget {
         case EstadoCanvas.vacio:
           return Colors.grey;
         case EstadoCanvas.dibujando:
-          return Colors.green;
+          return Colors.orange;
         case EstadoCanvas.calculando:
           return AppColors.skyBlue;
+        case EstadoCanvas.verificado:
+          return Colors.green;
         case EstadoCanvas.error:
           return Colors.red;
       }
@@ -51,13 +55,15 @@ class IaTutorScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- BANNER DE ESTADO DEL MOTOR ---
+            // --- BANNER DE ESTADO ---
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
                 color: getEstadoColor().withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: getEstadoColor().withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: getEstadoColor().withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -78,27 +84,30 @@ class IaTutorScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // --- SECCIÓN DE RESULTADOS ANALÍTICOS ---
+            // --- RESULTADOS ANALÍTICOS ---
             const Text('Análisis Estático',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
 
             _ResultCard(
               title: "Sumatorias de Fuerza",
               icon: Icons.functions,
-              value: provider.ultimosResultados != null
-                  ? "ΣFx = ${provider.ultimosResultados!.sumatoriaFx.toStringAsFixed(2)} N\nΣFy = ${provider.ultimosResultados!.sumatoriaFy.toStringAsFixed(2)} N"
+              value: provider.resultados != null
+                  ? "ΣFx = ${provider.resultados!.sumatoriaFx.toStringAsFixed(2)} N\n"
+                      "ΣFy = ${provider.resultados!.sumatoriaFy.toStringAsFixed(2)} N"
                   : "Pendiente de cálculo...",
             ),
 
             _ResultCard(
               title: "Reacciones e Incógnitas",
               icon: Icons.key,
-              value: provider.ultimosResultados != null
-                  ? (provider.ultimosResultados!.incognitasResueltas.isEmpty
+              value: provider.resultados != null
+                  ? (provider.resultados!.incognitasResueltas.isEmpty
                       ? "No se detectaron incógnitas de soporte."
-                      : provider.ultimosResultados!.incognitasResueltas.entries
-                          .map((e) => '${e.key} = ${(e.value as num).toStringAsFixed(2)} N')
+                      : provider.resultados!.incognitasResueltas.entries
+                          .map((e) =>
+                              '${e.key} = ${(e.value as num).toStringAsFixed(2)} N')
                           .join('\n'))
                   : "Esperando datos del motor...",
             ),
@@ -106,32 +115,35 @@ class IaTutorScreen extends StatelessWidget {
             _ResultCard(
               title: "Estado de Equilibrio",
               icon: Icons.balance,
-              value: provider.ultimosResultados != null
-                  ? (provider.ultimosResultados!.enEquilibrio
+              value: provider.resultados != null
+                  ? (provider.resultados!.enEquilibrio
                       ? "El sistema está en equilibrio estable."
                       : "El sistema NO está en equilibrio.")
                   : "Sin verificar.",
-              isHighlight: provider.ultimosResultados?.enEquilibrio ?? false,
+              isHighlight: provider.resultados?.enEquilibrio ?? false,
             ),
 
             const SizedBox(height: 30),
 
-            // --- RESOLUCIÓN PASO A PASO (GP) ---
+            // --- PASOS DEL TUTOR GENÉTICO ---
             if (provider.pasosPedagogicos.isNotEmpty) ...[
               const Text('Resolución Sugerida (IA)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.accent.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   children: provider.pasosPedagogicos
                       .map((paso) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 4),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -142,7 +154,8 @@ class IaTutorScreen extends StatelessWidget {
                                 Expanded(
                                     child: Text(paso,
                                         style: const TextStyle(
-                                            fontSize: 13, height: 1.4))),
+                                            fontSize: 13,
+                                            height: 1.4))),
                               ],
                             ),
                           ))
@@ -174,7 +187,8 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: Icon(icon,
             color: isHighlight ? Colors.green : AppColors.skyBlue),
